@@ -377,20 +377,30 @@ function setupVideo() {
   const v = $("vid"), segs = $("segs");
   segs.innerHTML = SEG.map((s, i) => `<button class="seg" data-i="${i}">${i + 1}. ${s[2]}</button>`).join("");
   segs.querySelectorAll(".seg").forEach(b => b.onclick = () => playSeg(+b.dataset.i));
-  v.ontimeupdate = () => {
-    if (stopAt !== null && v.currentTime >= stopAt) {
-      v.pause(); stopAt = null; segs.children[segI].classList.add("done");
-      const s = SEG[segI];
-      if (s[3]) { $("qq").textContent = s[3]; $("qk").textContent = "DISKUSI · " + s[2].toUpperCase(); $("qover").classList.add("on"); }
-    }
+  // berhenti otomatis di akhir setiap bagian, apa pun cara video diputar (Spasi, klik, tombol play bawaan, geser)
+  let lastT = v.currentTime || 0;
+  const stopSeg = (k) => {
+    v.pause(); stopAt = null; segI = k; segs.children[k].classList.add("done");
+    [...segs.children].forEach((b, j) => b.classList.toggle("on", j === k));
+    const s = SEG[k];
+    if (s[3]) { $("qq").textContent = s[3]; $("qk").textContent = "DISKUSI · " + s[2].toUpperCase(); $("qover").classList.add("on"); }
   };
+  v.onseeked = () => { lastT = v.currentTime; };
+  v.ontimeupdate = () => {
+    const t = v.currentTime;
+    if (!v.paused && t > lastT && t - lastT < 2) {
+      for (let k = 0; k < SEG.length - 1; k++) { const end = SEG[k][1]; if (lastT < end && t >= end) { lastT = t; stopSeg(k); return; } }
+    }
+    lastT = t;
+  };
+  v.onplay = () => { $("qover").classList.remove("on"); let k = SEG.findIndex(s => v.currentTime >= s[0] - 0.05 && v.currentTime < s[1]); if (k >= 0) { segI = k; [...segs.children].forEach((b, j) => b.classList.toggle("on", j === k)); } };
   $("qnext").onclick = () => { $("qover").classList.remove("on"); if (segI + 1 < SEG.length) playSeg(segI + 1); };
   v.onclick = () => togglePlay();
   [...segs.children].forEach((b, i) => b.classList.toggle("on", i === segI));
 }
 function playSeg(i) {
   const v = $("vid"); segI = i; $("qover").classList.remove("on");
-  v.currentTime = SEG[i][0]; stopAt = SEG[i][1];
+  v.currentTime = SEG[i][0]; stopAt = SEG[i][1]; 
   [...$("segs").children].forEach((b, k) => b.classList.toggle("on", k === i));
   v.play().catch(() => {});
 }
@@ -398,7 +408,6 @@ function togglePlay() {
   const l = $("lagu"); if (l && $("lagubtn").style.display === "none" && $("laguyt")) { try { window.open(LAGU_YT, "_blank"); } catch (e) {} return; }
   if (l && $("lagubtn").style.display !== "none") { if (l.paused) l.play().catch(() => {}); else l.pause(); return; }
   const v = $("vid"); if (!v) return;
-  if (stopAt === null && !$("qover").classList.contains("on")) { playSeg(segI); return; }
   if (v.paused) { $("qover").classList.remove("on"); v.play().catch(() => {}); } else v.pause();
 }
 

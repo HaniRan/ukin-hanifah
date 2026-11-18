@@ -427,6 +427,7 @@ let BC = null; try { BC = new BroadcastChannel("ukin-sync"); } catch (e) {}
 const NTFY = "https://ntfy.sh/ukin-hanifah-xi-7q4k9m2z";
 let ntfyLast = "";
 function ntfySend(st) {
+  if (!st.started) return;
   const sig = [st.started, st.idx, st.paused].join("|");
   if (sig === ntfyLast) return; ntfyLast = sig;
   try { fetch(NTFY, { method: "POST", body: JSON.stringify(st) }).catch(() => { ntfyLast = ""; }); } catch (e) {}
@@ -519,7 +520,8 @@ function monFromPeersSafe(peers) {
   const u = best.presence.ukin; monSrcRef = u;
   monSrc = { started: !!u.started, idx: +u.idx || 0, e: +u.e || 0, se: +u.se || 0, paused: !!u.paused }; monRecv = Date.now();
 }
-function monLocal(u) { if (!u || u.v !== 1) return; monSrc = { started: !!u.started, idx: +u.idx || 0, e: +u.e || 0, se: +u.se || 0, paused: !!u.paused }; monRecv = Math.min(Date.now(), +u.k || Date.now()); monConn = true; }
+let monLastK = 0;
+function monLocal(u) { if (!u || u.v !== 1 || !u.started) return; const k = +u.k || 0; if (k < monLastK) return; if (k && Date.now() - k + (+u.e || 0) * 1000 > 2.5 * 3600e3) return; monLastK = k; monSrc = { started: !!u.started, idx: +u.idx || 0, e: +u.e || 0, se: +u.se || 0, paused: !!u.paused }; monRecv = Math.min(Date.now(), +u.k || Date.now()); monConn = true; }
 if (BC) BC.onmessage = ev => { if (MON()) monLocal(ev.data); };
 window.addEventListener("storage", ev => { if (MON() && ev.key === "ukin.state") try { monLocal(JSON.parse(ev.newValue)); } catch (e) {} });
 let ntfyES = null;
@@ -538,7 +540,6 @@ function checkMode() { if (MON()) { buildMonitor(); ntfyListen(); try { monLocal
 window.addEventListener("hashchange", checkMode);
 document.addEventListener("keydown", e => { if (MON()) e.stopImmediatePropagation(); }, true);
 checkMode();
-setTimeout(() => { if (!MON()) pubState(); }, 800);
 (async () => {
   try { ROOM = window.claude && window.claude.use ? await window.claude.use("room") : null; } catch (e) { ROOM = null; }
   if (!ROOM) return;

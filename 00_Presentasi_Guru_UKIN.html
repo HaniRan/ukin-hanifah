@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Membuat Halaman Web Statis dengan HTML</title>
+<style>
+  :root { --ink:#1B1F2A; --ink2:#2B3040; --red:#C8203A; --red2:#A81A30; --amber:#F2A541; --blue:#2F6FB3; --green:#1E8C6E; --light:#F3F4F7; --muted:#5B6272; --purple:#6B2BB8; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--light); color:var(--ink); font-family:"Segoe UI",Calibri,Arial,sans-serif; overflow:hidden; }
+  body { transition: background .5s; }
+  body.dark { background:var(--ink); color:#fff; } body.red { background:var(--red); color:#fff; }
+  #stage { position:absolute; inset:0; padding:5vh 5vw; display:flex; flex-direction:column; }
+  .deco { position:absolute; border-radius:50%; z-index:0; pointer-events:none; }
+  .slide { position:relative; z-index:1; flex:1; min-height:0; display:flex; flex-direction:column; }
+  .kicker { font-size:clamp(14px,1.4vw,24px); letter-spacing:.16em; text-transform:uppercase; color:var(--red); font-weight:800; }
+  body.dark .kicker { color:var(--amber); } body.red .kicker { color:#FFE2B8; }
+  h1 { font-size:clamp(34px,4.6vw,84px); margin:.15em 0 .45em; line-height:1.08; }
+  .big { font-size:clamp(32px,4.2vw,76px); font-weight:800; line-height:1.15; max-width:88%; }
+  .lead { font-size:clamp(20px,2.2vw,40px); line-height:1.35; opacity:.85; max-width:85%; }
+  .grid { display:grid; gap:2vw; grid-template-columns:repeat(var(--n,3),1fr); }
+  .card { background:#fff; color:var(--ink); border-radius:28px; padding:3vh 1.8vw; box-shadow:0 10px 30px rgba(0,0,0,.08); }
+  body.dark .card.dk { background:var(--ink2); color:#fff; } body.red .card.rd { background:var(--red2); color:#fff; }
+  .card h3 { margin:.2em 0 .25em; font-size:clamp(22px,2.3vw,42px); line-height:1.15; }
+  .card p { margin:0; font-size:clamp(16px,1.6vw,28px); opacity:.75; line-height:1.35; }
+  .ico { font-size:clamp(40px,4.6vw,86px); line-height:1; }
+  .num { width:clamp(48px,4.6vw,84px); height:clamp(48px,4.6vw,84px); border-radius:50%; display:grid; place-items:center; color:#fff; font-weight:800; font-size:clamp(22px,2.3vw,40px); }
+  code { font-family:Consolas,"Courier New",monospace; }
+  /* ---- animasi masuk ---- */
+  .a { opacity:0; animation: up .7s cubic-bezier(.2,.8,.2,1) forwards; }
+  .pop { opacity:0; animation: pop .6s cubic-bezier(.3,1.5,.5,1) forwards; }
+  .fl { opacity:0; animation: fromleft .7s cubic-bezier(.2,.8,.2,1) forwards; }
+  @keyframes up { from { opacity:0; transform:translateY(40px);} to { opacity:1; transform:none; } }
+  @keyframes pop { from { opacity:0; transform:scale(.6);} to { opacity:1; transform:none; } }
+  @keyframes fromleft { from { opacity:0; transform:translateX(-80px);} to { opacity:1; transform:none; } }
+  @keyframes grow { from { transform:scale(0);} to { transform:scale(1);} }
+  @keyframes floaty { 50% { transform:translateY(-14px);} }
+  @keyframes draw { to { stroke-dashoffset:0; } }
+  @keyframes fill { to { fill-opacity:1; } }
+  @keyframes travel { 0% { left:6%; } 45%,55% { left:44%; } 100% { left:84%; } }
+  @keyframes typing { from { max-width:0; } to { max-width:100%; } }
+  @keyframes blink { 50% { opacity:0; } }
+  @keyframes barfill { from { width:0; } }
+  .d1{animation-delay:.15s}.d2{animation-delay:.35s}.d3{animation-delay:.55s}.d4{animation-delay:.75s}.d5{animation-delay:.95s}.d6{animation-delay:1.15s}.d7{animation-delay:1.35s}.d8{animation-delay:1.55s}.d9{animation-delay:1.75s}.d10{animation-delay:2s}
+  .float { animation: floaty 4s ease-in-out infinite; }
+  /* ---- komponen ---- */
+  .browser { background:#fff; border-radius:22px; box-shadow:0 14px 40px rgba(0,0,0,.12); overflow:hidden; color:var(--ink); }
+  .browser .bar { background:#E3E6EB; padding:1.2vh 1.2vw; display:flex; gap:.6vw; align-items:center; }
+  .browser .bar i { width:12px; height:12px; border-radius:50%; display:inline-block; }
+  .browser .bar span { flex:1; background:#fff; border-radius:999px; padding:.5vh 1vw; font-size:clamp(12px,1.1vw,18px); color:var(--muted); }
+  .src { background:#1E1E24; color:#eee; font-family:Consolas,monospace; font-size:clamp(14px,1.45vw,26px); line-height:1.55; padding:2.5vh 2vw; }
+  .src .t { color:#F2A541; } .src .s { color:#9CC3FF; } .src .a2 { color:#7FD1B9; }
+  .src .ln { overflow:hidden; white-space:nowrap; max-width:100%; animation: typing 1s steps(30) both; }
+  .flow { position:relative; display:flex; justify-content:space-between; align-items:center; margin-top:4vh; }
+  .flow .card { width:26%; text-align:center; }
+  .packet { position:absolute; top:calc(50% - 10vh); background:var(--amber); color:var(--ink); font-family:Consolas,monospace; font-weight:800; padding:.8vh 1vw; border-radius:12px; font-size:clamp(14px,1.3vw,22px); animation: travel 4.5s ease-in-out 1s infinite; left:6%; }
+  .line { position:absolute; left:13%; right:13%; top:50%; border-top:4px dashed rgba(0,0,0,.15); z-index:-1; }
+  .sched { display:flex; flex-direction:column; gap:2.4vh; margin-top:2vh; }
+  .sched .row { display:flex; align-items:center; gap:1.5vw; font-size:clamp(18px,1.9vw,34px); font-weight:700; }
+  .sched .row .lbl { width:24%; }
+  .sched .row .b { height:clamp(36px,5vh,64px); border-radius:16px; display:flex; align-items:center; padding:0 1.2vw; color:#fff; animation: barfill 1.2s cubic-bezier(.2,.8,.2,1) both; }
+  .big-timer { font-size:clamp(80px,13vw,240px); font-weight:800; font-variant-numeric:tabular-nums; line-height:1; }
+  .check { margin:0; padding-left:1.4em; } .check li { font-size:clamp(16px,1.65vw,28px); margin:.4em 0; }
+  .qopt { display:flex; align-items:center; gap:1.2vw; background:var(--light); border-radius:20px; padding:2vh 1.4vw; font-size:clamp(18px,2vw,36px); font-weight:600; transition:background .3s, transform .3s; }
+  .qopt b { width:clamp(40px,3.6vw,64px); height:clamp(40px,3.6vw,64px); border-radius:50%; background:var(--ink); color:#fff; display:grid; place-items:center; flex:none; }
+  .qopt.ok { background:#DDF2E7; transform:scale(1.02); } .qopt.ok b { background:var(--green); }
+  .qopt.no { filter:grayscale(1) opacity(.45); }
+  .qzdots { display:flex; gap:.5vw; } .qzdots i { width:14px; height:14px; border-radius:50%; background:#D5D8DF; display:inline-block; } .qzdots i.on { background:var(--red); transform:scale(1.3); }
+  .uraian { font-size:clamp(16px,1.7vw,30px); color:var(--muted); background:var(--light); border-radius:18px; padding:2vh 1.4vw; line-height:1.45; }
+  .frame { flex:1; min-height:0; border:0; border-radius:22px; width:100%; background:#fff; }
+  /* presensi */
+  .pgrid { flex:1; min-height:0; display:grid; grid-template-columns:repeat(5,1fr); grid-auto-rows:1fr; gap:1.2vw; }
+  .ptile { border:0; background:#fff; border-radius:20px; box-shadow:0 4px 14px rgba(0,0,0,.07); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.8vh; font:inherit; font-size:clamp(14px,1.45vw,26px); font-weight:700; color:var(--ink); padding:1vh .6vw; cursor:pointer; transition:transform .1s, background .2s; text-align:center; }
+  .ptile:active { transform:scale(.96); }
+  .ptile .st { font-size:clamp(12px,1.1vw,18px); padding:.3em .9em; border-radius:999px; background:#E9EBF0; color:var(--muted); }
+  .ptile.H { background:#E3F4EC; } .ptile.H .st { background:var(--green); color:#fff; }
+  .ptile.S { background:#FFF2DF; } .ptile.S .st { background:var(--amber); color:#fff; }
+  .ptile.I { background:#E7F1FB; } .ptile.I .st { background:var(--blue); color:#fff; }
+  .ptile.A { background:#FBE9EC; } .ptile.A .st { background:var(--red); color:#fff; }
+  .ptop { display:flex; justify-content:space-between; align-items:flex-end; gap:2vw; margin-bottom:2vh; }
+  .chips { display:flex; gap:.8vw; flex-wrap:wrap; }
+  .chip { border-radius:999px; padding:.7vh 1.2vw; font-weight:800; font-size:clamp(13px,1.2vw,20px); background:#fff; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+  .btn { border:0; border-radius:999px; padding:1vh 1.4vw; font:inherit; font-weight:700; font-size:clamp(13px,1.2vw,20px); cursor:pointer; background:var(--ink); color:#fff; }
+  .btn.ghost { background:#fff; color:var(--ink); box-shadow:0 2px 8px rgba(0,0,0,.08); }
+  /* video */
+  .vidwrap { position:relative; flex:1; min-height:0; display:flex; flex-direction:column; gap:1.4vh; }
+  .vidwrap video { flex:1; min-height:0; width:100%; background:#000; border-radius:22px; }
+  .segs { display:flex; gap:.6vw; flex-wrap:wrap; }
+  .seg { border:0; border-radius:999px; padding:.8vh 1.1vw; background:#fff; color:var(--ink); font-weight:700; font-size:clamp(12px,1.1vw,18px); cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.08); }
+  .seg.on { background:var(--red); color:#fff; } .seg.done { background:#DDEFE7; color:var(--green); }
+  .qover { position:absolute; left:0; right:0; bottom:0; display:none; justify-content:center; padding:0 2vw 2.2vh; pointer-events:none; }
+  .qover.on { display:flex; animation: up .45s cubic-bezier(.2,.8,.2,1); }
+  .qbox { pointer-events:auto; background:#fff; color:var(--ink); border-radius:22px; padding:1.8vh 2vw; width:100%; max-width:94%; display:flex; align-items:center; gap:1.6vw; box-shadow:0 10px 34px rgba(0,0,0,.35); border-left:10px solid var(--red); }
+  .qbox .k { color:var(--red); font-weight:800; letter-spacing:.12em; font-size:clamp(11px,1vw,16px); white-space:nowrap; }
+  .qbox .q { flex:1; font-size:clamp(20px,2.3vw,42px); font-weight:800; line-height:1.2; margin:0; }
+  /* timer guru */
+  #timer { position:fixed; top:8px; right:12px; font:600 12px/1.25 Consolas,monospace; color:rgba(80,86,100,.42); z-index:50; cursor:pointer; user-select:none; text-align:right; }
+  body.dark #timer, body.red #timer { color:rgba(255,255,255,.4); }
+  #timer .dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:rgba(120,126,140,.4); margin-right:5px; }
+  #timer.warn .dot { background:rgba(242,165,65,.9); } #timer.over .dot { background:rgba(200,32,58,.95); } #timer.hide { display:none; } #timer.paused { opacity:.55; }
+  #nav { position:fixed; right:10px; bottom:10px; display:flex; gap:6px; z-index:60; opacity:.3; } #nav:hover { opacity:1; }
+  #nav button { border:0; width:40px; height:40px; border-radius:50%; background:rgba(27,31,42,.7); color:#fff; font-size:16px; cursor:pointer; }
+  #start { position:fixed; inset:0; background:var(--ink); color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2vh; z-index:100; text-align:center; padding:4vw; }
+  #start button { border:0; background:var(--red); color:#fff; border-radius:999px; padding:2vh 4vw; font-size:clamp(18px,2vw,32px); font-weight:800; cursor:pointer; }
+  #start .keys { color:#B7BDC9; font-size:clamp(12px,1.2vw,18px); line-height:1.9; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div id="timer" title="Klik untuk jeda/lanjut"></div>
+<div id="nav"><button id="prev">◀</button><button id="next">▶</button></div>
+<div id="start">
+  <div class="kicker" style="color:#F2A541">Pertemuan 1 · Konsentrasi Keahlian TKJ</div>
+  <h1 style="color:#fff">Membuat Halaman Web Statis dengan HTML</h1>
+  <button id="go">Mulai</button>
+  <div class="keys">→ / PageDown / klik ▶ : berikutnya · ← / PageUp : sebelumnya · Spasi : putar/jeda video<br>T : sembunyikan timer · P : jeda timer · F : layar penuh</div>
+  <a href="#monitor" onclick="try{const w=window.open(location.href.split('#')[0]+'#monitor','_blank');if(w){event.preventDefault();}}catch(e){}" style="margin-top:28px;color:#888;font-size:13px;text-decoration:none;border:1px solid #555;padding:6px 14px;border-radius:20px">Buka sebagai monitor waktu (untuk PC kedua)</a>
+</div>
+<script>
+const NAMES = ["Refqy Ahmad Musawwir","Naufa Hafizha","Rasyah Razzaq Sufiadi","Zahran Zainulmuttaqin","Winda Qatrunnada Fatimah","Muh. Miftahuddaffa Rafisqy","Rozin Dzakwan Hanif Bahtiar","Muhammad Nabhan Rinaldi","Raja Hassan Maulana","Siti Tri Safitri","Qisth Almisbah Irhamsyah","Shafwan Syarif Anwar","Rayyan Althaf Said","Starly Sentauri","Muhammad Raffasya Fathi Rizqy"];
+const VIDEO = "09_Video_Materi_HTML_Web_Statis.mp4", LAGU = "indonesia_raya.mp3", LAGU_YT = "https://www.youtube.com/watch?v=A2Uccg2OMtc";
+const SEG = [
+  [0, 55.4, "Apa itu HTML?", "Siapa yang pernah melihat kode di balik sebuah website?"],
+  [55.4, 95.35, "Web Statis & Server", "Website apa saja yang termasuk web statis?"],
+  [95.35, 146.2, "Struktur Dasar", "Bagian mana yang tampil di layar: head atau body?"],
+  [146.2, 176.15, "Anatomi Tag", "Apa beda tag pembuka dan tag penutup?"],
+  [176.15, 252.95, "Demo Coding", "Tag apa yang dipakai untuk membuat daftar bernomor?"],
+  [252.95, 258.25, "Error 1", "Coba tebak, kenapa semua teksnya jadi tebal?"],
+  [258.25, 299.0, "Mencari Error", "Ada pertanyaan tentang materi tadi?"],
+  [299.0, 311, "Misi Kelompok", null],
+];
+const D = (c, x, y, s, op) => `<div class="deco" style="background:${c};width:${s}vw;height:${s}vw;left:${x}vw;top:${y}vh;opacity:${op ?? 1};animation:grow 1s cubic-bezier(.2,.8,.2,1) both"></div>`;
+
+const STEPS = [
+ { t:"Pembuka", m:2, theme:"dark", deco:D("#C8203A",72,-30,46)+D("#F2A541",70,48,14),
+   html:`<div style="margin:auto 0"><div class="kicker fl">Konsentrasi Keahlian TKJ · Administrasi Sistem Jaringan</div>
+   <h1 class="fl d2" style="font-size:clamp(44px,6vw,110px)">Membuat Halaman Web<br>Statis dengan HTML</h1>
+   <div class="lead a d4">Studi kasus: Web Profil Ekstrakurikuler Sekolah</div>
+   <div class="a d6" style="margin-top:6vh;font-size:clamp(16px,1.6vw,28px)"><b>Andi Hanifah Putri Rani, S.Kom</b><br><span style="opacity:.7">SMK Telkom Makassar · Rabu, 18 November 2026</span></div></div>` },
+ { t:"Indonesia Raya", m:2, theme:"dark", lagu:true, deco:D("#C8203A",-10,-40,60,.9)+D("#FFFFFF",78,55,30,.9),
+   html:`<div style="margin:auto 0;text-align:center"><div class="kicker fl">Sikap sempurna</div>
+   <div class="fl d1" style="display:inline-block;width:clamp(120px,14vw,260px);aspect-ratio:3/2;border-radius:10px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.4);margin:1vh 0 3vh"><div style="height:50%;background:#E70011"></div><div style="height:50%;background:#fff"></div></div>
+   <h1 class="fl d2" style="font-size:clamp(48px,7vw,130px)">Indonesia Raya</h1>
+   <div class="lead a d4" style="margin:0 auto">Mari bersama-sama menyanyikan lagu kebangsaan</div>
+   <audio id="lagu" src="${LAGU}" preload="auto"></audio>
+   <button class="btn a d6" id="lagubtn" style="background:#C8203A;font-size:clamp(18px,1.8vw,32px);padding:1.6vh 2.4vw;margin-top:4vh;display:none">▶ Putar musik</button><a class="btn a d6" id="laguyt" href="${LAGU_YT}" target="_blank" rel="noopener" style="background:#C8203A;font-size:clamp(18px,1.8vw,32px);padding:1.6vh 2.4vw;margin-top:4vh;display:inline-block;text-decoration:none">▶ Putar Indonesia Raya</a></div>` },
+ { t:"Presensi", m:2, presensi:true,
+   html:`<div class="ptop"><div><div class="kicker a">Presensi</div><h1 class="a d1" style="margin-bottom:0">Daftar Hadir Kelas XI</h1></div>
+     <div style="display:flex;flex-direction:column;gap:1vh;align-items:flex-end"><div class="chips" id="pchips"></div>
+     <div style="display:flex;gap:.6vw"><button class="btn ghost" id="pall">Semua hadir</button><button class="btn ghost" id="preset">Reset</button></div></div></div>
+     <div class="pgrid" id="pgrid"></div>` },
+ { t:"Cuaca Hati", m:2, cuaca:true,
+   html:`<div class="kicker a">Cek Perasaan</div><h1 class="a d1">Bagaimana cuaca hatimu hari ini?</h1>
+   <div class="grid" style="--n:3;flex:1;align-items:stretch;margin-top:1vh">
+     <div class="card pop d2 cw" data-k="0" style="text-align:center;cursor:pointer;user-select:none;display:flex;flex-direction:column;justify-content:center"><div style="font-size:clamp(70px,10vw,190px);line-height:1">☀️</div><h3 style="font-size:clamp(28px,3vw,56px)">Cerah</h3><p>Senang, semangat, siap belajar</p><div class="cn" style="font-size:clamp(44px,5vw,96px);font-weight:800;color:#C8203A">0</div></div>
+     <div class="card pop d4 cw" data-k="1" style="text-align:center;cursor:pointer;user-select:none;display:flex;flex-direction:column;justify-content:center"><div style="font-size:clamp(70px,10vw,190px);line-height:1">⛅</div><h3 style="font-size:clamp(28px,3vw,56px)">Berawan</h3><p>Biasa saja, agak lelah atau ngantuk</p><div class="cn" style="font-size:clamp(44px,5vw,96px);font-weight:800;color:#C8203A">0</div></div>
+     <div class="card pop d6 cw" data-k="2" style="text-align:center;cursor:pointer;user-select:none;display:flex;flex-direction:column;justify-content:center"><div style="font-size:clamp(70px,10vw,190px);line-height:1">🌧️</div><h3 style="font-size:clamp(28px,3vw,56px)">Hujan</h3><p>Sedih, cemas, atau kurang sehat</p><div class="cn" style="font-size:clamp(44px,5vw,96px);font-weight:800;color:#C8203A">0</div></div></div>
+   <div class="a d8" id="ctot" style="text-align:center;font-size:clamp(16px,1.6vw,28px);opacity:.7;margin-top:1.5vh">0 dari 15 siswa</div>` },
+ { t:"Ice Breaking – Tag Tepuk", m:1, theme:"red", tepuk:true, deco:D("#A81A30",66,-30,48)+D("#F2A541",84,62,12),
+   html:`<div class="kicker fl">Ice Breaking</div><h1 class="fl d1">Tag Tepuk!</h1>
+   <div class="grid" style="--n:2;margin-top:1vh">
+     <div class="card rd pop d2" style="text-align:center"><div style="font-family:Consolas,monospace;font-size:clamp(34px,4vw,72px);font-weight:800;color:#FFE2B8">&lt;buka&gt;</div><h3>"Buka tag!"</h3><p style="font-size:clamp(28px,3vw,52px);opacity:1">👏</p><p>tepuk 1 kali</p></div>
+     <div class="card rd pop d4" style="text-align:center"><div style="font-family:Consolas,monospace;font-size:clamp(34px,4vw,72px);font-weight:800;color:#FFE2B8">&lt;/tutup&gt;</div><h3>"Tutup tag!"</h3><p style="font-size:clamp(28px,3vw,52px);opacity:1">👏 👏</p><p>tepuk 2 kali</p></div></div>
+   <div id="cmd" class="a d6" style="flex:1;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none">
+     <div style="text-align:center"><div id="cmdtxt" style="font-size:clamp(44px,6vw,110px);font-weight:800">Klik di sini untuk mulai</div>
+     <div id="cmdsub" style="font-size:clamp(16px,1.6vw,28px);opacity:.75">Setiap klik memunculkan perintah acak</div></div></div>` },
+ { t:"Apersepsi", m:2,
+   html:`<div class="kicker a">Apersepsi</div><h1 class="a d1">Siapa yang hari ini sudah membuka website?</h1>
+   <div class="grid" style="--n:2;flex:1;align-items:center">
+     <div class="browser pop d3"><div class="bar"><i style="background:#FF5F56"></i><i style="background:#FFBD2E"></i><i style="background:#27C93F"></i><span>www.website-sekolah.sch.id</span></div>
+       <div style="padding:3vh 2vw"><div style="height:3.4vh;width:60%;background:#C8203A;border-radius:8px"></div><div style="height:1.8vh;width:90%;background:#E3E6EB;border-radius:6px;margin-top:2vh"></div><div style="height:1.8vh;width:80%;background:#E3E6EB;border-radius:6px;margin-top:1.2vh"></div><div style="height:14vh;width:100%;background:#F3F4F7;border-radius:12px;margin-top:2vh"></div></div></div>
+     <div class="browser pop d6"><div class="bar"><span>Klik kanan → View Page Source</span></div><div class="src">
+       <div class="ln" style="animation-delay:1.4s"><span class="t">&lt;html&gt;</span></div>
+       <div class="ln" style="animation-delay:2.1s">&nbsp;&nbsp;<span class="t">&lt;h1&gt;</span>Sekolah Kita<span class="t">&lt;/h1&gt;</span></div>
+       <div class="ln" style="animation-delay:2.8s">&nbsp;&nbsp;<span class="t">&lt;p&gt;</span>Selamat datang!<span class="t">&lt;/p&gt;</span></div>
+       <div class="ln" style="animation-delay:3.5s">&nbsp;&nbsp;<span class="t">&lt;img</span> <span class="a2">src=</span><span class="s">"logo.png"</span><span class="t">&gt;</span></div>
+       <div class="ln" style="animation-delay:4.2s"><span class="t">&lt;/html&gt;</span></div></div></div></div>` },
+ { t:"Motivasi", m:1,
+   html:`<div class="kicker a">Kenapa ini penting?</div><h1 class="a d1">Dari laptop sampai ke browser</h1>
+   <div class="flow" style="flex:1"><div class="line"></div><div class="packet">index.html</div>
+     <div class="card pop d2"><div class="ico">💻</div><h3>Laptop</h3><p>Hari ini: membuat file HTML</p></div>
+     <div class="card pop d4"><div class="ico">🖥️</div><h3>Web Server</h3><p>Pertemuan berikutnya: Apache</p></div>
+     <div class="card pop d6"><div class="ico">🌐</div><h3>Browser</h3><p>Dibuka lewat jaringan</p></div></div>` },
+ { t:"Pertanyaan Pemantik", m:2, theme:"dark", deco:D("#2B3040",70,-20,40),
+   html:`<div class="kicker a">Pertanyaan Pemantik</div>
+   <div class="grid" style="--n:2;flex:1;align-items:center;grid-template-columns:1.3fr 1fr">
+     <div><div class="big a d1">Kalau website diibaratkan <span style="color:#F2A541">rumah</span>, HTML itu bagian apa dari rumah?</div></div>
+     <svg viewBox="0 0 300 260" style="width:100%;max-height:60vh" class="float">
+       <g fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" style="stroke-dasharray:1200;stroke-dashoffset:1200;animation:draw 2.4s ease .6s forwards">
+         <path d="M30 240 H270"/><path d="M50 240 V120 H250 V240"/><path d="M30 130 L150 30 L270 130"/><rect x="125" y="170" width="50" height="70"/><rect x="72" y="145" width="38" height="38"/><rect x="190" y="145" width="38" height="38"/></g>
+       <text x="150" y="110" text-anchor="middle" fill="#F2A541" font-size="40" font-weight="800" font-family="Segoe UI" opacity="0" style="animation:up .6s ease 3s forwards">?</text></svg></div>` },
+ { t:"Tujuan Pembelajaran", m:1,
+   html:`<div class="kicker a">Tujuan Pembelajaran</div><h1 class="a d1">Hari ini kalian mampu:</h1>
+   <div class="grid" style="--n:4;flex:1;align-items:stretch">${[["📖","Menjelaskan","struktur dasar HTML"],["🧩","Menerapkan","tag teks, list, link, gambar, tabel"],["🔍","Memperbaiki","kode HTML yang salah"],["🚀","Membuat","web profil ekskul & mempresentasikannya"]].map((x,i)=>`<div class="card pop d${i*2+2}"><div class="ico">${x[0]}</div><h3>${x[1]}</h3><p>${x[2]}</p></div>`).join("")}</div>
+   <div class="lead a d10" style="margin-top:3vh">Kesepakatan: 📵 HP disimpan · 🤝 Menghargai teman · ✋ Berani bertanya</div>` },
+ { t:"Pertanyaan Menantang", m:3, theme:"red", deco:D("#A81A30",68,-25,48)+D("#F2A541",82,60,12),
+   html:`<div style="margin:auto 0"><div class="kicker fl">Ayo Pahami Masalahnya</div>
+   <div class="big fl d2" style="margin-top:2vh">Siswa baru bingung memilih ekskul karena belum ada halaman web profil ekskul.</div>
+   <div class="lead a d5" style="margin-top:4vh;font-weight:700">Bagaimana kalian membantu menyelesaikannya, hanya dengan HTML?</div>
+   <div class="grid a d7" style="--n:5;margin-top:5vh">${["⚽ Futsal","🤖 Robotik","🇮🇩 Paskibra","🎵 Musik","💬 English Club"].map(e=>`<div class="card rd" style="text-align:center;padding:2vh 1vw"><h3 style="font-size:clamp(16px,1.6vw,28px)">${e}</h3></div>`).join("")}</div></div>` },
+ { t:"Video Materi", m:15, video:true,
+   html:`<div class="vidwrap"><div class="segs" id="segs"></div><video id="vid" src="${VIDEO}" preload="auto"></video>
+     <div class="qover" id="qover"><div class="qbox"><div><div class="k" id="qk">DISKUSI</div></div><div class="q" id="qq"></div><button class="btn" id="qnext" style="white-space:nowrap">Lanjut ▶</button></div></div></div>` },
+ { t:"Kelompok", m:5,
+   html:`<div class="kicker a">Misi Kelompok</div><h1 class="a d1">Buat web profil ekskul!</h1>
+   <div class="grid" style="--n:5">${[["⚽","Futsal","#C8203A"],["🤖","Robotik","#2F6FB3"],["🇮🇩","Paskibra","#A11A2F"],["🎵","Musik","#6B2BB8"],["💬","English Club","#1E8C6E"]].map((e,i)=>`<div class="card pop d${i+2}" style="text-align:center"><div class="num" style="background:${e[2]};margin:0 auto 1.4vh">K${i+1}</div><div class="ico">${e[0]}</div><h3>${e[1]}</h3></div>`).join("")}</div>
+   <div class="grid a d8" style="--n:3;margin-top:4vh">${[["⌨️","Koder","Mengetik kode"],["📝","Penyusun Konten","Menyiapkan teks & gambar"],["🎤","Presenter","Mencatat & presentasi"]].map(r=>`<div class="card" style="display:flex;gap:1.2vw;align-items:center"><div class="ico">${r[0]}</div><div><h3>${r[1]}</h3><p>${r[2]}</p></div></div>`).join("")}</div>
+   <div class="lead a d10" style="margin-top:2.4vh">Tentukan sendiri siapa mengerjakan peran apa di kelompokmu.</div>` },
+ { t:"Jadwal", m:2,
+   html:`<div class="kicker a">Jadwal Kerja</div><h1 class="a d1">20 menit untuk LKPD</h1>
+   <div class="sched">
+     <div class="row a d2"><div class="lbl">Bagian A + B</div><div class="b" style="width:40%;background:var(--blue);animation-delay:.6s">8 menit</div></div>
+     <div class="row a d4"><div class="lbl">Bagian C</div><div class="b" style="width:60%;background:var(--red);animation-delay:1s">12 menit</div></div>
+     <div class="row a d6"><div class="lbl">Selesai cepat?</div><div class="b" style="width:32%;background:var(--amber);color:var(--ink);animation-delay:1.4s">★ Tantangan Bintang</div></div></div>
+   <div class="lead a d8" style="margin-top:4vh">Kalau error, cek pasangan tag dulu sebelum bertanya. Error itu teman belajar!</div>` },
+ { t:"Kerjakan LKPD", m:20, lkpd:true,
+   html:`<div class="kicker a">Kerjakan LKPD</div>
+   <div style="display:flex;gap:4vw;align-items:center;flex:1;min-height:0">
+     <div class="pop d1" style="text-align:center"><div class="big-timer" id="lk">20:00</div><div class="lead" style="max-width:none">sisa waktu</div></div>
+     <div class="card a d3" style="flex:1"><h3>Daftar periksa Bagian C</h3><ol class="check">
+       <li>Struktur dokumen lengkap</li><li>&lt;title&gt; berisi nama ekskul</li><li>&lt;h1&gt; + minimal 2 &lt;h2&gt;</li><li>&lt;p&gt; dengan &lt;b&gt; atau &lt;i&gt;</li>
+       <li>&lt;ul&gt; kegiatan + &lt;ol&gt; pendaftaran</li><li>&lt;img&gt; dengan src dan alt</li><li>Tabel jadwal dengan &lt;th&gt;</li><li>Link dengan target="_blank"</li></ol></div></div>` },
+ { t:"Presentasi", m:12, theme:"dark", deco:D("#2B3040",-10,55,30),
+   html:`<div class="kicker a">Presentasi Hasil Karya</div><h1 class="a d1">Tunjukkan web kalian!</h1>
+   <div class="grid" style="--n:4;flex:1;align-items:stretch">${[["1","🖥️","Tampilkan","web di browser"],["2","🧾","Jelaskan","kode yang dipakai"],["3","🐞","Ceritakan","1 error & cara memperbaikinya"],["4","🙋","Tanya jawab","dari kelompok lain"]].map((x,i)=>`<div class="card dk pop d${i*2+2}"><div class="num" style="background:var(--amber);color:var(--ink)">${x[0]}</div><div class="ico" style="margin-top:2vh">${x[1]}</div><h3>${x[2]}</h3><p>${x[3]}</p></div>`).join("")}</div>
+   <div class="lead a d10" style="margin-top:3vh">±2 menit per kelompok · beri Tag Tepuk setelah setiap presentasi 👏</div>` },
+ { t:"Evaluasi", m:3,
+   html:`<div class="kicker a">Catatan untuk Kita</div><h1 class="a d1">Hati-hati dengan ini!</h1>
+   <div class="grid" style="--n:3;flex:1;align-items:center">${[["<br>","Tidak perlu tag penutup"],["<img>","Wajib punya src dan alt"],["</tag>","Yang dibuka terakhir, ditutup duluan"]].map((x,i)=>`<div class="card pop d${i*2+2}" style="text-align:center"><h3><code style="color:var(--red);font-size:1.3em">${x[0].replace(/</g,"&lt;").replace(/>/g,"&gt;")}</code></h3><p>${x[1]}</p></div>`).join("")}</div>` },
+ { t:"Kesimpulan", m:3, theme:"dark", deco:D("#C8203A",75,-25,40),
+   html:`<div class="kicker a">Kesimpulan</div><div class="big a d1">Apa saja yang sudah kita pelajari hari ini?</div>
+   <div class="grid" style="--n:4;margin-top:auto">${["HTML = bahasa markah","DOCTYPE · html · head · body","Tag teks, list, gambar, link, tabel","Web statis → web server"].map((x,i)=>`<div class="card dk pop d${i*2+4}"><h3 style="font-size:clamp(18px,1.8vw,32px)">${x}</h3></div>`).join("")}</div>` },
+ { t:"Kuis", m:5, quiz:true,
+   html:`<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:2vw">
+     <div><div class="kicker a">Kuis · tulis jawabanmu di lembar jawaban</div><h1 class="a d1" id="qzh" style="margin-bottom:.2em">Soal 1 dari 12</h1></div>
+     <div class="qzdots a d2" id="qzdots"></div></div>
+   <div class="card pop d2" id="qzcard" style="flex:1;min-height:0;display:flex;flex-direction:column;gap:2.4vh;padding:3.5vh 2.6vw">
+     <div id="qzq" style="font-size:clamp(24px,2.8vw,50px);font-weight:800;line-height:1.25"></div>
+     <div id="qzopt" class="grid" style="--n:2;gap:1.4vw"></div></div>
+   <div style="display:flex;gap:.8vw;justify-content:center;margin-top:2vh">
+     <button class="btn ghost" id="qzprev">◀ Soal sebelumnya</button><button class="btn" id="qzkey" style="background:var(--green)">Tampilkan jawaban</button><button class="btn ghost" id="qznext">Soal berikutnya ▶</button></div>` },
+ { t:"Refleksi", m:3,
+   html:`<div class="kicker a">Refleksi</div><h1 class="a d1">3 – 2 – 1</h1>
+   <div class="grid" style="--n:3;flex:1;align-items:center">${[["3","hal yang aku pelajari","var(--red)"],["2","hal yang menarik","var(--amber)"],["1","hal yang masih membingungkan","var(--blue)"]].map((x,i)=>`<div class="card pop d${i*2+2}" style="text-align:center"><div style="font-size:clamp(70px,9vw,160px);font-weight:800;color:${x[2]};line-height:1">${x[0]}</div><h3>${x[1]}</h3></div>`).join("")}</div>
+   <div class="lead a d8">Cuaca hatimu sekarang: ☀️ cerah, ⛅ berawan, atau 🌧️ hujan?</div>` },
+ { t:"Motivasi", m:1, theme:"red", deco:D("#A81A30",60,-30,50),
+   html:`<div style="margin:auto 0"><div class="ico pop">🏆</div><div class="big fl d2" style="margin-top:2vh">Hari ini kalian sudah membuat web sendiri.</div><div class="lead a d5" style="margin-top:2vh">Ini langkah pertama menjadi teknisi web server profesional!</div></div>` },
+ { t:"Pertemuan Berikutnya", m:1,
+   html:`<div class="kicker a">Pertemuan Berikutnya</div><h1 class="a d1">Memasang web di web server</h1>
+   <div class="grid" style="--n:2;flex:1;align-items:center"><div class="card pop d3"><div class="ico">🏠</div><h3>Tugas mandiri</h3><p>Tambahkan halaman <code>galeri.html</code> dan tautkan ke <code>index.html</code></p></div>
+   <div class="card pop d5"><div class="ico">🖥️</div><h3>Materi berikutnya</h3><p>Memasang halaman web di web server agar bisa diakses lewat jaringan</p></div></div>` },
+ { t:"Penutup", m:2, theme:"dark", deco:D("#C8203A",70,-30,46)+D("#F2A541",72,52,14),
+   html:`<div style="margin:auto 0"><div class="kicker fl">Sampai jumpa</div><h1 class="fl d2" style="font-size:clamp(60px,9vw,160px)">Terima kasih!</h1><div class="lead a d4">Andi Hanifah Putri Rani, S.Kom · SMK Telkom Makassar</div></div>` },
+];
+let acc = 0; STEPS.forEach(s => { s.start = acc; acc += s.m; s.end = acc; });
+
+const $ = id => document.getElementById(id);
+let idx = 0, t0 = null, pausedAt = null, pauseTotal = 0, stepEnter = 0;
+const elapsed = () => t0 === null ? 0 : ((pausedAt ?? Date.now()) - t0 - pauseTotal) / 1000;
+const mmss = s => { s = Math.max(0, Math.floor(s)); return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); };
+
+function render() {
+  const s = STEPS[idx];
+  document.body.className = s.theme || "";
+  $("stage").innerHTML = (s.deco || "") + `<div class="slide">${s.html}</div>`;
+  stepEnter = elapsed();
+  if (s.video) setupVideo();
+  if (s.presensi) setupPresensi();
+  if (s.tepuk) setupTepuk();
+  if (s.lagu) setupLagu();
+  if (s.cuaca) setupCuaca();
+  if (s.quiz) setupQuiz();
+  tick();
+}
+function tick() {
+  const s = STEPS[idx], e = elapsed(), inStep = e - stepEnter, left = s.m * 60 - inStep;
+  const tm = $("timer");
+  tm.innerHTML = `<span class="dot"></span>${mmss(inStep)} / ${s.m}:00 · sisa ${left >= 0 ? mmss(left) : "+" + mmss(-left)}<br>total ${mmss(e)} / ${acc}:00 · target ${mmss(s.end * 60)}`;
+  tm.classList.toggle("warn", left < 60 && left >= 0); tm.classList.toggle("over", left < 0); tm.classList.toggle("paused", pausedAt !== null);
+  if (s.lkpd && $("lk")) $("lk").textContent = left >= 0 ? mmss(left) : "00:00";
+}
+setInterval(tick, 500);
+
+// ---------- presensi (dicentang guru) ----------
+const PKEY = "presensi.uk.v2"; const ORDER = ["", "H", "S", "I", "A"], LBL = { "": "Belum", H: "Hadir", S: "Sakit", I: "Izin", A: "Alpa" };
+let pst = Array(15).fill("");
+try { const x = JSON.parse(localStorage.getItem(PKEY)); if (Array.isArray(x) && x.length === 15) pst = x; } catch (e) {}
+const psave = () => { try { localStorage.setItem(PKEY, JSON.stringify(pst)); } catch (e) {} };
+function setupPresensi() {
+  const g = $("pgrid");
+  const draw = () => {
+    g.innerHTML = NAMES.map((n, i) => `<button class="ptile ${pst[i]} pop" style="animation-delay:${i * 0.04}s" data-i="${i}"><span style="opacity:.5;font-size:.75em">${i + 1}</span>${n}<span class="st">${LBL[pst[i]]}</span></button>`).join("");
+    g.querySelectorAll(".ptile").forEach(b => b.onclick = () => { const i = +b.dataset.i; pst[i] = ORDER[(ORDER.indexOf(pst[i]) + 1) % ORDER.length]; psave(); b.className = "ptile " + pst[i]; b.querySelector(".st").textContent = LBL[pst[i]]; chips(); });
+    chips();
+  };
+  const chips = () => {
+    const c = k => pst.filter(x => x === k).length;
+    $("pchips").innerHTML = `<span class="chip" style="color:var(--green)">Hadir ${c("H")}</span><span class="chip" style="color:#B5761A">Sakit ${c("S")}</span><span class="chip" style="color:var(--blue)">Izin ${c("I")}</span><span class="chip" style="color:var(--red)">Alpa ${c("A")}</span>`;
+  };
+  $("pall").onclick = () => { pst = pst.map(x => x || "H"); psave(); draw(); };
+  $("preset").onclick = () => { pst = Array(15).fill(""); psave(); draw(); };
+  draw();
+}
+
+// ---------- kuis ----------
+const QZ = [
+  ["Kepanjangan dari HTML adalah …", ["Hyper Text Making Language", "HyperText Markup Language", "Home Tool Markup Language", "Hyperlink Text Mark Language"], 1],
+  ["Bagian dokumen HTML yang berisi konten yang tampil di halaman web adalah …", ["<head>", "<title>", "<body>", "<meta>"], 2],
+  ["Tag untuk membuat judul dengan ukuran paling besar adalah …", ["<h6>", "<head>", "<h1>", "<title>"], 2],
+  ['Perhatikan kode <a href="profil.html">Profil</a>. Kata href disebut …', ["Tag", "Atribut", "Elemen", "Konten"], 1],
+  ["Tag berikut yang TIDAK memerlukan tag penutup adalah …", ["<p>", "<li>", "<img>", "<td>"], 2],
+  ["Untuk membuat daftar bernomor digunakan tag …", ["<ul>", "<ol>", "<dl>", "<li>"], 1],
+  ["Atribut pada <img> yang menampilkan teks pengganti ketika gambar gagal dimuat adalah …", ["src", "title", "alt", "width"], 2],
+  ["Tag yang digunakan untuk membuat sel judul pada tabel adalah …", ["<td>", "<th>", "<tr>", "<thead>"], 1],
+  ["Perhatikan kode <b><i>Halo</b></i>. Kesalahan pada kode tersebut adalah …", ["Tag <b> tidak boleh dipakai", "Urutan penutupan tag bersarang tidak tepat", "Tag <i> harus ditulis kapital", "Tidak ada kesalahan"], 1],
+  ["Contoh website yang paling tepat dibuat sebagai web statis adalah …", ["Toko online dengan keranjang belanja", "Media sosial sekolah", "Halaman profil ekstrakurikuler", "Aplikasi ujian online"], 2],
+  ["Uraian 1: Jelaskan hubungan antara <html>, <head>, dan <body> dalam sebuah dokumen HTML!", null,
+   "<html> membungkus seluruh dokumen. Di dalamnya ada <head> (informasi halaman, tidak tampil) dan <body> (semua isi yang tampil di browser). <head> ditulis sebelum <body>."],
+  ["Uraian 2: Sebuah ekskul ingin menampilkan jadwal latihan. Rancang potongan kode HTML yang tepat dan jelaskan alasan pemilihan tagnya!", null,
+   "Pakai tabel: <table> dengan <tr> untuk baris, <th> untuk judul kolom (Hari, Jam, Kegiatan), dan <td> untuk isinya, karena jadwal berbentuk baris dan kolom."],
+];
+let qi = 0, qshow = false;
+const esc = t => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+function setupQuiz() {
+  const draw = () => {
+    const q = QZ[qi];
+    $("qzh").textContent = `Soal ${qi + 1} dari ${QZ.length}` + (qi >= 10 ? " · Uraian" : "");
+    $("qzdots").innerHTML = QZ.map((_, i) => `<i class="${i === qi ? "on" : ""}"></i>`).join("");
+    $("qzq").innerHTML = esc(q[0]);
+    if (q[1]) $("qzopt").innerHTML = q[1].map((o, i) => `<div class="qopt pop ${qshow ? (i === q[2] ? "ok" : "no") : ""}" style="animation-delay:${i * .08}s"><b>${"ABCD"[i]}</b><span>${esc(o)}</span></div>`).join("");
+    else $("qzopt").innerHTML = `<div class="uraian pop" style="grid-column:1/-1">${qshow ? "<b>Contoh jawaban:</b> " + esc(q[2]) : "Tulis jawabanmu di lembar jawaban."}</div>`;
+    $("qzkey").textContent = qshow ? "Sembunyikan jawaban" : "Tampilkan jawaban";
+    $("qzprev").style.visibility = qi === 0 ? "hidden" : "visible";
+    $("qznext").style.visibility = qi === QZ.length - 1 ? "hidden" : "visible";
+  };
+  $("qzprev").onclick = () => { if (qi > 0) { qi--; qshow = false; draw(); } };
+  $("qznext").onclick = () => { if (qi < QZ.length - 1) { qi++; qshow = false; draw(); } };
+  $("qzkey").onclick = () => { qshow = !qshow; draw(); };
+  draw();
+}
+
+// ---------- ice breaking tag tepuk ----------
+// ---------- Indonesia Raya ----------
+function setupLagu() {
+  const a = $("lagu"), b = $("lagubtn"); if (!a) return;
+  const show = () => { b.style.display = ""; const y = $("laguyt"); if (y) y.style.display = "none"; };
+  a.addEventListener("canplay", show, { once: true }); if (a.readyState >= 3) show();
+  a.onplay = () => b.textContent = "⏸ Jeda musik"; a.onpause = () => b.textContent = "▶ Putar musik"; a.onended = () => b.textContent = "▶ Putar ulang";
+  b.onclick = () => { if (a.paused) a.play().catch(() => {}); else a.pause(); };
+}
+// ---------- Cuaca Hati (diklik guru, TV biasa) ----------
+const CKEY = "cuaca.uk.v1"; let cst = [0, 0, 0];
+function setupCuaca() {
+  const cards = [...document.querySelectorAll(".cw")];
+  const draw = () => { cards.forEach((c, i) => c.querySelector(".cn").textContent = cst[i]); const t = cst[0] + cst[1] + cst[2]; $("ctot").textContent = t + " dari 15 siswa"; };
+  cards.forEach((c, i) => {
+    c.onclick = () => { cst[i]++; draw(); };
+    c.oncontextmenu = e => { e.preventDefault(); cst[i] = Math.max(0, cst[i] - 1); draw(); };
+  });
+  draw();
+}
+function setupTepuk() {
+  let last = -1, n = 0;
+  $("cmd").onclick = () => {
+    let k = Math.random() < .5 ? 0 : 1; if (k === last && Math.random() < .5) k = 1 - k; last = k; n++;
+    const el = $("cmdtxt");
+    el.textContent = k === 0 ? "Buka tag!" : "Tutup tag!";
+    el.style.color = k === 0 ? "#FFE2B8" : "#fff";
+    $("cmdsub").textContent = k === 0 ? "👏  (1 kali)" : "👏 👏  (2 kali)";
+    el.style.animation = "none"; void el.offsetWidth; el.style.animation = "pop .45s cubic-bezier(.3,1.5,.5,1)";
+  };
+}
+
+// ---------- video materi ----------
+let segI = 0, stopAt = null;
+function setupVideo() {
+  const v = $("vid"), segs = $("segs");
+  segs.innerHTML = SEG.map((s, i) => `<button class="seg" data-i="${i}">${i + 1}. ${s[2]}</button>`).join("");
+  segs.querySelectorAll(".seg").forEach(b => b.onclick = () => playSeg(+b.dataset.i));
+  v.ontimeupdate = () => {
+    if (stopAt !== null && v.currentTime >= stopAt) {
+      v.pause(); stopAt = null; segs.children[segI].classList.add("done");
+      const s = SEG[segI];
+      if (s[3]) { $("qq").textContent = s[3]; $("qk").textContent = "DISKUSI · " + s[2].toUpperCase(); $("qover").classList.add("on"); }
+    }
+  };
+  $("qnext").onclick = () => { $("qover").classList.remove("on"); if (segI + 1 < SEG.length) playSeg(segI + 1); };
+  v.onclick = () => togglePlay();
+  [...segs.children].forEach((b, i) => b.classList.toggle("on", i === segI));
+}
+function playSeg(i) {
+  const v = $("vid"); segI = i; $("qover").classList.remove("on");
+  v.currentTime = SEG[i][0]; stopAt = SEG[i][1];
+  [...$("segs").children].forEach((b, k) => b.classList.toggle("on", k === i));
+  v.play().catch(() => {});
+}
+function togglePlay() {
+  const l = $("lagu"); if (l && $("lagubtn").style.display === "none" && $("laguyt")) { try { window.open(LAGU_YT, "_blank"); } catch (e) {} return; }
+  if (l && $("lagubtn").style.display !== "none") { if (l.paused) l.play().catch(() => {}); else l.pause(); return; }
+  const v = $("vid"); if (!v) return;
+  if (stopAt === null && !$("qover").classList.contains("on")) { playSeg(segI); return; }
+  if (v.paused) { $("qover").classList.remove("on"); v.play().catch(() => {}); } else v.pause();
+}
+
+// ---------- kontrol ----------
+function go(d) { const n = idx + d; if (n < 0 || n >= STEPS.length) return; const v = $("vid"); if (v) v.pause(); const l = $("lagu"); if (l) l.pause(); idx = n; stopAt = null; render(); }
+$("prev").onclick = () => go(-1); $("next").onclick = () => go(1);
+function togglePause() { if (t0 === null) return; if (pausedAt === null) pausedAt = Date.now(); else { pauseTotal += Date.now() - pausedAt; pausedAt = null; } tick(); }
+$("timer").onclick = togglePause;
+$("go").onclick = () => { t0 = Date.now(); $("start").remove(); render(); try { document.documentElement.requestFullscreen().catch(() => {}); } catch (e) {} };
+document.addEventListener("keydown", e => {
+  if ($("start")) { if (e.key === "Enter" || e.key === " ") $("go").click(); return; }
+  const k = e.key.toLowerCase();
+  if (["ArrowRight", "PageDown"].includes(e.key)) { e.preventDefault(); go(1); }
+  else if (["ArrowLeft", "PageUp"].includes(e.key)) { e.preventDefault(); go(-1); }
+  else if (e.key === " ") { e.preventDefault(); togglePlay(); }
+  else if (k === "t") $("timer").classList.toggle("hide");
+  else if (k === "p") togglePause();
+  else if (k === "f") { if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {}); else document.exitFullscreen(); }
+});
+
+// ================== SINKRON KE LAYAR MONITOR (PC lain, link #monitor) ==================
+const MON = () => location.hash === "#monitor";
+let ROOM = null;
+let BC = null; try { BC = new BroadcastChannel("ukin-sync"); } catch (e) {}
+function pubState() {
+  if (MON()) return;
+  const st = { v: 1, started: t0 !== null, idx, n: STEPS.length, e: Math.round(elapsed() * 10) / 10, se: Math.round(stepEnter * 10) / 10, paused: pausedAt !== null, k: Date.now() };
+  if (BC) try { BC.postMessage(st); } catch (e) {}
+  try { localStorage.setItem('ukin.state', JSON.stringify(st)); } catch (e) {}
+  if (ROOM) ROOM.presence({ ukin: st }).catch(() => {});
+}
+const _render0 = render; render = function () { _render0(); pubState(); };
+const _tp0 = togglePause; togglePause = function () { _tp0(); pubState(); };
+$("timer").onclick = togglePause;
+setInterval(pubState, 5000);
+
+// ---------- tampilan monitor (hitam putih, satu layar) ----------
+let monEl = null, monSrc = null, monRecv = 0, monPeer = null, monConn = false;
+function buildMonitor() {
+  if (monEl) return;
+  const css = document.createElement("style");
+  css.textContent = `
+  #mon{position:fixed;inset:0;z-index:9999;background:#000;color:#fff;font-family:"Segoe UI",Arial,sans-serif;display:grid;grid-template-rows:auto 1fr auto;padding:3vh 4vw;gap:1.5vh;overflow:hidden;cursor:pointer;user-select:none}
+  #mon .row{display:flex;justify-content:space-between;align-items:baseline;gap:2vw}
+  #mon .lab{font-size:1.6vw;letter-spacing:.25em;text-transform:uppercase;opacity:.6}
+  #mon .big{font-variant-numeric:tabular-nums;font-weight:800;line-height:1;white-space:nowrap}
+  #mon .tot{font-size:min(6vw,10vh)}
+  #mon .main{border:.4vw solid #fff;border-radius:1.5vw;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:2vh 3vw}
+  #mon .main.over{background:#fff;color:#000}
+  #mon .main.warn{animation:mblink 1s steps(2) infinite}
+  @keyframes mblink{50%{border-style:dashed}}
+  #mon .sname{font-size:min(4.2vw,7vh);font-weight:700;margin:1vh 0 2vh}
+  #mon .clock{font-size:min(16vw,26vh)}
+  #mon .sub{font-size:2.6vw;margin-top:1.5vh;font-variant-numeric:tabular-nums}
+  #mon .bar{height:1.2vh;background:#333;border-radius:1vh;overflow:hidden;width:100%;margin-top:2vh}
+  #mon .bar i{display:block;height:100%;background:#fff}
+  #mon .main.over .bar{background:#bbb} #mon .main.over .bar i{background:#000}
+  #mon .foot{font-size:2.2vw}
+  #mon .st{font-size:1.4vw;opacity:.6}
+  #mon .wait{font-size:4vw;opacity:.8}`;
+  document.head.appendChild(css);
+  monEl = document.createElement("div"); monEl.id = "mon";
+  monEl.onclick = () => { try { if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {}); } catch (e) {} };
+  document.body.appendChild(monEl);
+  const s = $("start"); if (s) s.style.display = "none";
+  monDraw(); setInterval(monDraw, 250);
+}
+function monDraw() {
+  if (!monEl) return;
+  const conn = monConn ? "● tersambung ke layar presentasi" : "○ menunggu layar presentasi…";
+  const p = monSrc;
+  if (!p || !p.started) {
+    monEl.innerHTML = `<div class="row"><span class="lab">Monitor Waktu · UKIN</span><span class="st">${conn}</span></div>
+      <div class="main"><div class="wait">${p ? "Menunggu guru menekan <b>Mulai</b>…" : "Buka web guru di laptop utama dan tekan Mulai"}</div></div>
+      <div class="row foot"><span>Total ${acc} menit · ${STEPS.length} slide</span><span class="st">klik layar = layar penuh</span></div>`;
+    return;
+  }
+  const e = p.paused ? p.e : p.e + (Date.now() - monRecv) / 1000;
+  const i = Math.min(Math.max(p.idx | 0, 0), STEPS.length - 1), s = STEPS[i], nx = STEPS[i + 1];
+  const inStep = e - p.se, dur = s.m * 60, left = dur - inStep;
+  const late = p.se - s.start * 60;
+  const jadwal = Math.abs(late) < 30 ? "sesuai jadwal" : (late > 0 ? "terlambat " + mmss(late) : "lebih cepat " + mmss(-late));
+  const cls = left < 0 ? "over" : (left < 60 ? "warn" : "");
+  monEl.innerHTML = `
+    <div class="row">
+      <div><div class="lab">Menit ke-</div><div class="big tot">${Math.floor(e / 60) + 1}<span style="font-size:.45em;opacity:.6"> / ${acc}</span></div></div>
+      <div style="text-align:center"><div class="lab">Total berjalan</div><div class="big" style="font-size:4vw">${mmss(e)}</div></div>
+      <div style="text-align:right"><div class="lab">Slide</div><div class="big tot">${i + 1}<span style="font-size:.45em;opacity:.6"> / ${STEPS.length}</span></div></div>
+    </div>
+    <div class="main ${cls}">
+      <div class="lab" style="opacity:.8">${p.paused ? "⏸ TIMER DIJEDA" : "Sedang dijelaskan"}</div>
+      <div class="sname">${s.t}</div>
+      <div class="big clock">${mmss(inStep)}</div>
+      <div class="sub">jatah ${s.m} menit · ${left >= 0 ? "sisa " + mmss(left) : "LEWAT " + mmss(-left)}</div>
+      <div class="bar"><i style="width:${Math.min(100, inStep / dur * 100)}%"></i></div>
+    </div>
+    <div class="row foot">
+      <span>Target slide ini selesai di menit ${s.end} · ${jadwal}</span>
+      <span>${nx ? "Berikutnya: <b>" + nx.t + "</b> (" + nx.m + "′)" : "Slide terakhir"}</span>
+    </div>
+    <div class="row"><span class="st">${conn}</span><span class="st">klik layar = layar penuh</span></div>`;
+  monEl.style.gridTemplateRows = "auto 1fr auto auto";
+}
+let monSrcRef = null;
+function monFromPeersSafe(peers) {
+  let best = null;
+  for (const q of peers) { if (q.sameTab) continue; const u = q.presence && q.presence.ukin; if (!u || typeof u !== "object" || u.v !== 1) continue; if (!best || q.updatedAt > best.updatedAt) best = q; }
+  if (!best || best.presence.ukin === monSrcRef) return;
+  const u = best.presence.ukin; monSrcRef = u;
+  monSrc = { started: !!u.started, idx: +u.idx || 0, e: +u.e || 0, se: +u.se || 0, paused: !!u.paused }; monRecv = Date.now();
+}
+function monLocal(u) { if (!u || u.v !== 1) return; monSrc = { started: !!u.started, idx: +u.idx || 0, e: +u.e || 0, se: +u.se || 0, paused: !!u.paused }; monRecv = Math.min(Date.now(), +u.k || Date.now()); monConn = true; }
+if (BC) BC.onmessage = ev => { if (MON()) monLocal(ev.data); };
+window.addEventListener("storage", ev => { if (MON() && ev.key === "ukin.state") try { monLocal(JSON.parse(ev.newValue)); } catch (e) {} });
+function checkMode() { if (MON()) { buildMonitor(); try { monLocal(JSON.parse(localStorage.getItem("ukin.state"))); } catch (e) {} } }
+window.addEventListener("hashchange", checkMode);
+document.addEventListener("keydown", e => { if (MON()) e.stopImmediatePropagation(); }, true);
+checkMode();
+(async () => {
+  try { ROOM = window.claude && window.claude.use ? await window.claude.use("room") : null; } catch (e) { ROOM = null; }
+  if (!ROOM) return;
+  ROOM.onConnection(c => { monConn = c; if (c) pubState(); }, () => { monConn = false; });
+  ROOM.onPeers(ch => { if (MON()) monFromPeersSafe(ch.peers); else if (ch.joined.length) pubState(); }, () => {});
+  pubState();
+})();
+</script>
+</body>
+</html>

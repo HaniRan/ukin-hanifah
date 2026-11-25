@@ -93,11 +93,7 @@
   .qbox { pointer-events:auto; background:#fff; color:var(--ink); border-radius:22px; padding:1.8vh 2vw; width:100%; max-width:94%; display:flex; align-items:center; gap:1.6vw; box-shadow:0 10px 34px rgba(0,0,0,.35); border-left:10px solid var(--red); }
   .qbox .k { color:var(--red); font-weight:800; letter-spacing:.12em; font-size:clamp(11px,1vw,16px); white-space:nowrap; }
   .qbox .q { flex:1; font-size:clamp(20px,2.3vw,42px); font-weight:800; line-height:1.2; margin:0; }
-  /* timer guru */
-  #timer { position:fixed; top:8px; right:12px; font:600 12px/1.25 Consolas,monospace; color:rgba(80,86,100,.42); z-index:50; cursor:pointer; user-select:none; text-align:right; }
-  body.dark #timer, body.red #timer { color:rgba(255,255,255,.4); }
-  #timer .dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:rgba(120,126,140,.4); margin-right:5px; }
-  #timer.warn .dot { background:rgba(242,165,65,.9); } #timer.over .dot { background:rgba(200,32,58,.95); } #timer.hide { display:none; } #timer.paused { opacity:.55; }
+  /* navigasi & pembuka */
   #nav { position:fixed; right:10px; bottom:10px; display:flex; gap:6px; z-index:60; opacity:.3; } #nav:hover { opacity:1; }
   #nav button { border:0; width:40px; height:40px; border-radius:50%; background:rgba(27,31,42,.7); color:#fff; font-size:16px; cursor:pointer; }
   #start { position:fixed; inset:0; background:var(--ink); color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2vh; z-index:100; text-align:center; padding:4vw; }
@@ -113,8 +109,6 @@
   <div class="kicker" style="color:#F2A541">Pertemuan 1 · Konsentrasi Keahlian TKJ</div>
   <h1 style="color:#fff">Membuat Halaman Web Statis dengan HTML</h1>
   <button id="go">Mulai</button>
-  
- 
 </div>
 <script>
 const NAMES = ["Refqy Ahmad Musawwir","Naufa Hafizha","Rasyah Razzaq Sufiadi","Zahran Zainulmuttaqin","Winda Qatrunnada Fatimah","Muh. Miftahuddaffa Rafisqy","Rozin Dzakwan Hanif Bahtiar","Muhammad Nabhan Rinaldi","Raja Hassan Maulana","Siti Tri Safitri","Qisth Almisbah Irhamsyah","Shafwan Syarif Anwar","Rayyan Althaf Said","Starly Sentauri","Muhammad Raffasya Fathi Rizqy"];
@@ -274,9 +268,6 @@ function render() {
 }
 function tick() {
   const s = STEPS[idx], e = elapsed(), inStep = e - stepEnter, left = s.m * 60 - inStep;
-  const tm = $("timer");
-  tm.innerHTML = `<span class="dot"></span>${mmss(inStep)} / ${s.m}:00 · sisa ${left >= 0 ? mmss(left) : "+" + mmss(-left)}<br>total ${mmss(e)} / ${acc}:00 · target ${mmss(s.end * 60)}`;
-  tm.classList.toggle("warn", left < 60 && left >= 0); tm.classList.toggle("over", left < 0); tm.classList.toggle("paused", pausedAt !== null);
   if (s.lkpd && $("lk")) $("lk").textContent = left >= 0 ? mmss(left) : "00:00";
 }
 setInterval(tick, 500);
@@ -339,7 +330,6 @@ function setupQuiz() {
   draw();
 }
 
-// ---------- ice breaking tag tepuk ----------
 // ---------- Indonesia Raya ----------
 function setupLagu() {
   const a = $("lagu"), b = $("lagubtn"); if (!a) return;
@@ -359,6 +349,7 @@ function setupCuaca() {
   });
   draw();
 }
+// ---------- ice breaking tag tepuk ----------
 function setupTepuk() {
   let last = -1, n = 0;
   $("cmd").onclick = () => {
@@ -377,7 +368,6 @@ function setupVideo() {
   const v = $("vid"), segs = $("segs");
   segs.innerHTML = SEG.map((s, i) => `<button class="seg" data-i="${i}">${i + 1}. ${s[2]}</button>`).join("");
   segs.querySelectorAll(".seg").forEach(b => b.onclick = () => playSeg(+b.dataset.i));
-  // berhenti otomatis di akhir setiap bagian, apa pun cara video diputar (Spasi, klik, tombol play bawaan, geser)
   let lastT = v.currentTime || 0;
   const stopSeg = (k) => {
     v.pause(); stopAt = null; segI = k; segs.children[k].classList.add("done");
@@ -415,7 +405,6 @@ function togglePlay() {
 function go(d) { const n = idx + d; if (n < 0 || n >= STEPS.length) return; const v = $("vid"); if (v) v.pause(); const l = $("lagu"); if (l) l.pause(); idx = n; stopAt = null; render(); }
 $("prev").onclick = () => go(-1); $("next").onclick = () => go(1);
 function togglePause() { if (t0 === null) return; if (pausedAt === null) pausedAt = Date.now(); else { pauseTotal += Date.now() - pausedAt; pausedAt = null; } tick(); }
-$("timer").onclick = togglePause;
 $("go").onclick = () => { t0 = Date.now(); $("start").remove(); render(); try { document.documentElement.requestFullscreen().catch(() => {}); } catch (e) {} };
 document.addEventListener("keydown", e => {
   if ($("start")) { if (e.key === "Enter" || e.key === " ") $("go").click(); return; }
@@ -423,7 +412,6 @@ document.addEventListener("keydown", e => {
   if (["ArrowRight", "PageDown"].includes(e.key)) { e.preventDefault(); go(1); }
   else if (["ArrowLeft", "PageUp"].includes(e.key)) { e.preventDefault(); go(-1); }
   else if (e.key === " ") { e.preventDefault(); togglePlay(); }
-  else if (k === "t") $("timer").classList.toggle("hide");
   else if (k === "p") togglePause();
   else if (k === "f") { if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {}); else document.exitFullscreen(); }
 });
@@ -432,7 +420,6 @@ document.addEventListener("keydown", e => {
 const MON = () => location.hash === "#monitor";
 let ROOM = null;
 let BC = null; try { BC = new BroadcastChannel("ukin-sync"); } catch (e) {}
-// sinkron antar-PC lewat internet (untuk hosting biasa, mis. Vercel)
 const NTFY = "https://ntfy.sh/ukin-hanifah-xi-7q4k9m2z";
 let ntfyLast = "";
 function ntfySend(st) {
@@ -451,7 +438,6 @@ function pubState() {
 }
 const _render0 = render; render = function () { _render0(); pubState(); };
 const _tp0 = togglePause; togglePause = function () { _tp0(); pubState(); };
-$("timer").onclick = togglePause;
 setInterval(pubState, 5000);
 
 // ---------- tampilan monitor (hitam putih, satu layar) ----------
